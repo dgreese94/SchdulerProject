@@ -36,11 +36,32 @@ void InitSimTimer(){
 	itime.it_interval.tv_nsec = TIMER_NS;
 
 	timer_create(CLOCK_REALTIME, &event, &timer);
-	timer_settime(timer_id, 0, &itime, NULL);
+	timer_settime(timer, 0, &itime, NULL);
 
-    return 0;
+    return;
 }
 
-int RateMonotonicScheduler(process * arr, ...){
+int RateMonotonicScheduler(process * arr, int arr_len){
+	printf("Starting Rate Monotonic Scheduler with %d processes.\n", arr_len);
 
+	int i;
+	process temp;
+	pthread_t threads[arr_len];
+	for (i = 1; i < arr_len; i++){
+		int j = i;
+		while(j > 0 && arr[j-1].period_time > arr[j].period_time ){
+			temp = arr[j];
+			arr[j] = arr[j-1];
+			arr[j-1] = temp;
+			j--;
+		}
+	}
+
+	for(i = 0; i< arr_len; i++){
+		threads[i] = CreateProcess(&(arr[i]));
+		pthread_setschedprio(threads[i], HIGHEST_PRIORITY - i);
+		pthread_join(threads[i], NULL);
+	}
+
+	return 0;
 }
