@@ -22,8 +22,7 @@ void * fake_process(void * args){
 	int exec_time = pargs->exec_time;
 
 	while(i<exec_time){
-		int ret = nanospin(&when);
-		printf("%d",ret);
+		nanospin(&when);
 		i++;
 	}
 	printf("Exiting thread.\n");
