@@ -16,6 +16,6 @@
 unsigned long sim_time;
 
 void InitSimTimer();
-int RateMonotonicScheduler(process * arr, ...);
+int RateMonotonicScheduler(process * arr, int arr_len);
 
 #endif /* SCHEDULER_H_ */
