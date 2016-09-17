@@ -3,7 +3,9 @@
 #include <sys/trace.h>
 #include <time.h>
 #include <pthread.h>
+#include <string.h>
 #include "process.h"
+#include "scheduler.h"
 
 #define CSV_LINE_MAX (64)
 #define CSV_WORD_MAX (16)
@@ -38,11 +40,11 @@ unsigned int strToUint(char *str) {
 
 int parseCSV(char *filePath, process * arr) {
     FILE *file = fopen(filePath, "r");
-
+    int lineNo = -5;
     if (file != NULL) {
         // get a line
         char line[CSV_LINE_MAX];
-        int lineNo = 0;
+        lineNo = 0;
         while (fgets(line, CSV_LINE_MAX, file) != NULL) {
             lineNo++;
             // create a new int array representing a process [execution time, period, deadline]
@@ -73,7 +75,7 @@ int parseCSV(char *filePath, process * arr) {
                 }
                 else if ((c < '0' || c > '9') && (c != '\n' && c != '\r')) {
                     // file content error
-                    return 2;
+                    return -2;
                 }
                 else if (c != '\n' && c != '\r') {
                     if (processCur < 3) {
@@ -81,7 +83,7 @@ int parseCSV(char *filePath, process * arr) {
                     }
                     else {
                         // line format error
-                        return 3;
+                        return -3;
                     }
                 }
             }
@@ -91,16 +93,13 @@ int parseCSV(char *filePath, process * arr) {
 
         if (ferror(file)) {
             // line read error
-            return 4;
+            return -4;
         }
     }
-    else {
-        // file open error
-        return 5;
-    }
+    //else returns -5 file read error
 
     fclose(file);
-    return 0;
+    return lineNo;
 }
 
 int main(int argc, char *argv[]) {
@@ -117,7 +116,7 @@ int main(int argc, char *argv[]) {
 	else {
 		process arr[MAX_THREADS];
 		int parseCSVResult = parseCSV(argv[1], arr);
-		if (parseCSVResult) {
+		if (parseCSVResult<0) {
 			// conversion error
 			printf("Failure!\n");
 			printf("%d\n", parseCSVResult);
@@ -125,19 +124,18 @@ int main(int argc, char *argv[]) {
 		}
 		else {
 			printf("Success!\n");
+
 		}
 		InitSimTimer();
 
-		switch(argv[2]){
-			case "rm":
-				RateMonotonicScheduler();
-				break;
-			case "edf":
-				break;
-			case "":
-				break;
-			default:
-				break;
+		if(!strcmp(argv[2],"rm")){
+			RateMonotonicScheduler(arr, parseCSVResult);
+		}
+		else if (!strcmp(argv[2], "edf")){
+
+		}
+		else if (!strcmp(argv[2],"")){
+
 		}
 	}
 	printf("Done running threads.\n");
