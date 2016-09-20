@@ -18,13 +18,18 @@ void * fake_process(void * args){
   	when.tv_sec = TIMESPEC_SEC;
   	when.tv_nsec= TIMESPEC_NS;
   	process * pargs = args;
-	int i = 0;
-	int exec_time = pargs->exec_time;
+  	int exec_time = pargs->exec_time;
 
-	while(i<exec_time){
-		nanospin(&when);
-		i++;
-	}
+  	while(!terminated){
+  		int i = 0;
+  		while(i<exec_time){
+  				nanospin(&when);
+  				i++;
+  		}
+  		pthread_setschedprio(pthread_self(), DONE_PRIORITY);
+  	}
+
+
 	printf("Exiting thread.\n");
 	return 0;
 }
@@ -70,4 +75,14 @@ pthread_t CreateIdleThread(){
 	pthread_setschedprio(idle, IDLE_PRIORITY);
 
 	return idle;
+}
+
+void StartingThreads(){
+	terminated = 0;
+	return;
+}
+
+void TerminateThreads(){
+	terminated = 1;
+	return;
 }
