@@ -12,10 +12,11 @@
 
 #define TIMER_NS 1000000
 #define TIMER_SEC 0
+#define RUN_TIME 30000
 
 unsigned long sim_time;
 
-void InitSimTimer();
+
 int RateMonotonicScheduler(process * arr, int arr_len);
 
 #endif /* SCHEDULER_H_ */
