@@ -23,8 +23,13 @@ typedef struct process_args {
 	unsigned int exec_time;
 	unsigned int period_time;
 	unsigned int deadline;
+	unsigned long next_period;
 }process;
 
+int terminated;
+
+void StartingThreads();
+void TerminateThreads();
 pthread_t CreateProcess( process * args );
 pthread_t CreateIdleThread();
 
