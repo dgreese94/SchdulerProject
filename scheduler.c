@@ -43,10 +43,14 @@ void InitSimTimer(){
 
 int RateMonotonicScheduler(process * arr, int arr_len){
 	printf("Starting Rate Monotonic Scheduler with %d processes.\n", arr_len);
-
+	InitSimTimer();
 	int i;
 	process temp;
 	pthread_t threads[arr_len];
+	int original_prio[arr_len];
+	struct timespec when;
+	when.tv_sec = TIMESPEC_SEC;
+	when.tv_nsec= TIMESPEC_NS;
 	for (i = 1; i < arr_len; i++){
 		int j = i;
 		while(j > 0 && arr[j-1].period_time > arr[j].period_time ){
@@ -56,12 +60,25 @@ int RateMonotonicScheduler(process * arr, int arr_len){
 			j--;
 		}
 	}
-
+	StartingThreads();
 	for(i = 0; i< arr_len; i++){
 		threads[i] = CreateProcess(&(arr[i]));
 		pthread_setschedprio(threads[i], HIGHEST_PRIORITY - i);
-		pthread_join(threads[i], NULL);
+		original_prio[i] = HIGHEST_PRIORITY - i;
+		arr[i].next_period = sim_time + arr[i].period_time;
 	}
+
+	while(sim_time < RUN_TIME){
+		for(i = 0; i < arr_len; i++){
+			if(sim_time>arr[i].next_period){
+				pthread_setschedprio(threads[i], original_prio[i]);
+				arr[i].next_period = sim_time + arr[i].period_time;
+			}
+		}
+		nanosleep(&when, NULL);
+	}
+
+	TerminateThreads();
 
 	return 0;
 }
