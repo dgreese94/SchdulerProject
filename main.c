@@ -126,7 +126,6 @@ int main(int argc, char *argv[]) {
 			printf("Success!\n");
 
 		}
-		InitSimTimer();
 
 		if(!strcmp(argv[2],"rm")){
 			RateMonotonicScheduler(arr, parseCSVResult);
