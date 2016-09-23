@@ -7,6 +7,9 @@
 
 #include "process.h"
 #include "stdio.h"
+#include "simtimer.h"
+#include "schedulerlog.h"
+
 /**
  * Thread function to create a simulated process
  *
@@ -14,18 +17,29 @@
  */
 void * fake_process(void * args){
 
+//	pthread_mutex_lock( &start_lock );
+//	//wait for start
+//	pthread_mutex_unlock( &start_lock );
+
   	struct timespec when;
   	when.tv_sec = TIMESPEC_SEC;
   	when.tv_nsec= TIMESPEC_NS;
   	process * pargs = args;
   	int exec_time = pargs->exec_time;
 
+  	pargs->time_to_completion = pargs->exec_time;
+
   	while(!terminated){
   		int i = 0;
+
   		while(i<exec_time){
   				nanospin(&when);
   				i++;
+  				pargs->time_to_completion--;
   		}
+  		pargs->time_to_completion = pargs->exec_time;
+//  		pargs->next_deadline = pargs->next_period + pargs->deadline;
+  		fprintf(logfile, "%lu;%u;%u;Finished;\n", sim_time, pargs->process_id, DONE_PRIORITY);
   		pthread_setschedprio(pthread_self(), DONE_PRIORITY);
   	}
 
@@ -41,7 +55,7 @@ void * fake_process(void * args){
  * @param args {void*} NULL
  */
 void * idle_thread(void * args){
-	for(;;){}
+	while(!terminated){}
 	return 0;
 }
 

@@ -6,9 +6,11 @@
 #include <string.h>
 #include "process.h"
 #include "scheduler.h"
+#include "schedulerlog.h"
 
 #define CSV_LINE_MAX (64)
 #define CSV_WORD_MAX (16)
+
 
 //////
 
@@ -103,6 +105,9 @@ int parseCSV(char *filePath, process * arr) {
 }
 
 int main(int argc, char *argv[]) {
+
+	logfile = fopen("scheduler.log", "a");
+
 	//readCSV
 	if (argc < 2 || argc > 3) {
 		// format error
@@ -118,12 +123,12 @@ int main(int argc, char *argv[]) {
 		int parseCSVResult = parseCSV(argv[1], arr);
 		if (parseCSVResult<0) {
 			// conversion error
-			printf("Failure!\n");
+			printf("Failed to parse CSV\n");
 			printf("%d\n", parseCSVResult);
 			return parseCSVResult;
 		}
 		else {
-			printf("Success!\n");
+			printf("CSV parsed successfully\n");
 
 		}
 
@@ -131,13 +136,13 @@ int main(int argc, char *argv[]) {
 			RateMonotonicScheduler(arr, parseCSVResult);
 		}
 		else if (!strcmp(argv[2], "edf")){
-
+			EarliestDeadlineScheduler(arr, parseCSVResult);
 		}
-		else if (!strcmp(argv[2],"")){
-
+		else if (!strcmp(argv[2],"sct")){
+			ShortestCompletionScheduler(arr, parseCSVResult);
 		}
 	}
 	printf("Done running threads.\n");
-
+	fclose(logfile);
 	return EXIT_SUCCESS;
 }

@@ -4,54 +4,27 @@
  *  Created on: Sep 16, 2016
  *      Author: dgr3547
  */
-
-#include <stdio.h>
-#include <time.h>
-#include <sys/netmgr.h>
-#include <sys/neutrino.h>
 #include "scheduler.h"
-
-
-void clockTickAction(){
-	sim_time++;
-}
-
-void InitSimTimer(){
-
-	sim_time = 0;
-
-	struct sigevent         event;
-	struct sigaction		action;
-	struct itimerspec       itime;
-	timer_t                 timer;
-
-	action.sa_sigaction = &clockTickAction;
-	action.sa_flags = SA_SIGINFO;
-	sigaction(SIGUSR1, &action, NULL);
-	SIGEV_SIGNAL_INIT(&event, SIGUSR1);
-
-	itime.it_value.tv_sec = 0;
-	itime.it_value.tv_nsec = TIMER_NS;
-	itime.it_interval.tv_sec = 0;
-	itime.it_interval.tv_nsec = TIMER_NS;
-
-	timer_create(CLOCK_REALTIME, &event, &timer);
-	timer_settime(timer, 0, &itime, NULL);
-
-    return;
-}
+#include "simtimer.h"
+#include "schedulerlog.h"
 
 int RateMonotonicScheduler(process * arr, int arr_len){
-	printf("Starting Rate Monotonic Scheduler with %d processes.\n", arr_len);
+	fprintf(logfile, "Starting Rate Monotonic Scheduler with %d processes.\n", arr_len);
 	InitSimTimer();
 	int i;
 	process temp;
-	pthread_t threads[arr_len];
+	pthread_t idle = CreateIdleThread();
 	int original_prio[arr_len];
 	struct timespec when;
 	when.tv_sec = TIMESPEC_SEC;
 	when.tv_nsec= TIMESPEC_NS;
+
+	for (i = 0; i < arr_len; i++){
+		arr[i].process_id = i;
+	}
+	// insertion sort
 	for (i = 1; i < arr_len; i++){
+		arr[i].process_id = i;
 		int j = i;
 		while(j > 0 && arr[j-1].period_time > arr[j].period_time ){
 			temp = arr[j];
@@ -61,18 +34,24 @@ int RateMonotonicScheduler(process * arr, int arr_len){
 		}
 	}
 	StartingThreads();
+	fprintf(logfile, "Simulated time;Process ID;Priority;Description\n");
+
 	for(i = 0; i< arr_len; i++){
-		threads[i] = CreateProcess(&(arr[i]));
-		pthread_setschedprio(threads[i], HIGHEST_PRIORITY - i);
+		arr[i].thread = CreateProcess(&(arr[i]));
+		pthread_setschedprio(arr[i].thread, HIGHEST_PRIORITY - i);
 		original_prio[i] = HIGHEST_PRIORITY - i;
 		arr[i].next_period = sim_time + arr[i].period_time;
+		fprintf(logfile, "%lu;%u;%u;Initial Creation;\n", sim_time, arr[i].process_id, HIGHEST_PRIORITY-i);
 	}
 
 	while(sim_time < RUN_TIME){
+		int status;
 		for(i = 0; i < arr_len; i++){
 			if(sim_time>arr[i].next_period){
-				pthread_setschedprio(threads[i], original_prio[i]);
+				pthread_setschedprio(arr[i].thread, original_prio[i]);
 				arr[i].next_period = sim_time + arr[i].period_time;
+				status = fprintf(logfile, "%lu;%u;%u;Rescheduled;\n", sim_time, arr[i].process_id, original_prio[i]);
+				printf("Status: %d\n", status);
 			}
 		}
 		nanosleep(&when, NULL);
@@ -80,5 +59,134 @@ int RateMonotonicScheduler(process * arr, int arr_len){
 
 	TerminateThreads();
 
+	for(i = 0; i< arr_len; i++){
+		pthread_join(arr[i].thread, 0);
+	}
+	pthread_join(idle, 0);
+	return 0;
+}
+
+int EarliestDeadlineScheduler(process * arr, int arr_len){
+	printf("Starting Earliest Deadline First Scheduler with %d processes.\n", arr_len);
+	InitSimTimer();
+	int i,j;
+	process temp;
+	pthread_t idle = CreateIdleThread();
+	struct timespec when;
+	when.tv_sec = TIMESPEC_SEC;
+	when.tv_nsec= TIMESPEC_NS;
+
+	for (i = 0; i < arr_len; i++){
+		arr[i].process_id = i;
+	}
+
+	for (i = 1; i < arr_len; i++){
+		int j = i;
+		while(j > 0 && arr[j-1].deadline > arr[j].deadline ){
+			temp = arr[j];
+			arr[j] = arr[j-1];
+			arr[j-1] = temp;
+			j--;
+		}
+	}
+
+	StartingThreads();
+	for(i = 0; i< arr_len; i++){
+		arr[i].thread = CreateProcess(&(arr[i]));
+		pthread_setschedprio(arr[i].thread, HIGHEST_PRIORITY - i);
+		arr[i].next_period = sim_time + arr[i].period_time;
+		arr[i].next_deadline = sim_time + arr[i].deadline;
+	}
+
+	while(sim_time < RUN_TIME){
+		nanosleep(&when, NULL);
+		for(i = 0; i < arr_len; i++){
+			if(sim_time>arr[i].next_period){
+				arr[i].next_deadline = sim_time + arr[i].deadline;
+				for (j = 1; j < arr_len; j++){
+					int k = j;
+					while(k > 0 && arr[k-1].next_deadline > arr[k].next_deadline ){
+						temp = arr[k];
+						arr[k] = arr[k-1];
+						arr[k-1] = temp;
+						k--;
+					}
+				}
+				for(i = 0; i < arr_len; i++){
+					pthread_setschedprio(arr[i].thread, HIGHEST_PRIORITY - 1 );
+				}
+				arr[i].next_period = sim_time + arr[i].period_time;
+			}
+		}
+	}
+
+	TerminateThreads();
+
+	for(i = 0; i< arr_len; i++){
+		pthread_join(arr[i].thread, 0);
+	}
+	pthread_join(idle, 0);
+	return 0;
+}
+
+int ShortestCompletionScheduler(process * arr, int arr_len){
+	printf("Starting Shortest Completion Time Scheduler with %d processes.\n", arr_len);
+	InitSimTimer();
+	int i,j;
+	process temp;
+	pthread_t idle = CreateIdleThread();
+	struct timespec when;
+	when.tv_sec = TIMESPEC_SEC;
+	when.tv_nsec= TIMESPEC_NS;
+
+	for (i = 0; i < arr_len; i++){
+		arr[i].process_id = i;
+	}
+
+	for (i = 1; i < arr_len; i++){
+		int j = i;
+		while(j > 0 && arr[j-1].exec_time > arr[j].exec_time ){
+			temp = arr[j];
+			arr[j] = arr[j-1];
+			arr[j-1] = temp;
+			j--;
+		}
+	}
+
+	StartingThreads();
+
+	for(i = 0; i < arr_len; i++){
+		arr[i].thread = CreateProcess(&(arr[i]));
+		pthread_setschedprio(arr[i].thread, HIGHEST_PRIORITY - 1 );
+		arr[i].next_period = sim_time + arr[i].period_time;
+	}
+
+	while(sim_time < RUN_TIME){
+		nanosleep(&when, NULL);
+		for(i = 0; i < arr_len; i++){
+			if(sim_time>arr[i].next_period){
+				for (j = 1; j < arr_len; j++){
+					int k = j;
+					while(k > 0 && arr[k-1].time_to_completion > arr[k].time_to_completion ){
+						temp = arr[k];
+						arr[k] = arr[k-1];
+						arr[k-1] = temp;
+						k--;
+					}
+				}
+				for(i = 0; i < arr_len; i++){
+					pthread_setschedprio(arr[i].thread, HIGHEST_PRIORITY - 1 );
+				}
+				arr[i].next_period = sim_time + arr[i].period_time;
+			}
+		}
+	}
+
+	TerminateThreads();
+
+	for(i = 0; i< arr_len; i++){
+		pthread_join(arr[i].thread, 0);
+	}
+	pthread_join(idle, 0);
 	return 0;
 }
