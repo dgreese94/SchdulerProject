@@ -38,8 +38,10 @@ void * fake_process(void * args){
   				pargs->time_to_completion--;
   		}
   		pargs->time_to_completion = pargs->exec_time;
-//  		pargs->next_deadline = pargs->next_period + pargs->deadline;
-  		fprintf(logfile, "%lu;%u;%u;Finished;\n", sim_time, pargs->process_id, DONE_PRIORITY);
+//  		printf("%lu;%u;%u;Finished;\n", sim_time, pargs->process_id, DONE_PRIORITY);
+//  		fprintf(logfile, "%lu;%u;%u;Finished;\n", sim_time, pargs->process_id, DONE_PRIORITY);
+  		LogEntry(sim_time, DONE_PRIORITY, pargs->process_id, "Finished");
+//  		fflush(logfile);
   		pthread_setschedprio(pthread_self(), DONE_PRIORITY);
   	}
 

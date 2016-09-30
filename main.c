@@ -12,6 +12,7 @@
 #define CSV_WORD_MAX (16)
 
 
+
 //////
 
 
@@ -106,8 +107,6 @@ int parseCSV(char *filePath, process * arr) {
 
 int main(int argc, char *argv[]) {
 
-	logfile = fopen("scheduler.log", "a");
-
 	//readCSV
 	if (argc < 2 || argc > 3) {
 		// format error
@@ -142,7 +141,7 @@ int main(int argc, char *argv[]) {
 			ShortestCompletionScheduler(arr, parseCSVResult);
 		}
 	}
-	printf("Done running threads.\n");
-	fclose(logfile);
+	WriteLog();
+	printf("Done writing Log. Exiting.\n");
 	return EXIT_SUCCESS;
 }

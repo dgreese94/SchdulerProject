@@ -9,7 +9,7 @@
 #include "schedulerlog.h"
 
 int RateMonotonicScheduler(process * arr, int arr_len){
-	fprintf(logfile, "Starting Rate Monotonic Scheduler with %d processes.\n", arr_len);
+//	fprintf(logfile, "Starting Rate Monotonic Scheduler with %d processes.\n", arr_len);
 	InitSimTimer();
 	int i;
 	process temp;
@@ -34,24 +34,22 @@ int RateMonotonicScheduler(process * arr, int arr_len){
 		}
 	}
 	StartingThreads();
-	fprintf(logfile, "Simulated time;Process ID;Priority;Description\n");
+//	fprintf(logfile, "Simulated time;Process ID;Priority;Description\n");
 
 	for(i = 0; i< arr_len; i++){
 		arr[i].thread = CreateProcess(&(arr[i]));
 		pthread_setschedprio(arr[i].thread, HIGHEST_PRIORITY - i);
 		original_prio[i] = HIGHEST_PRIORITY - i;
 		arr[i].next_period = sim_time + arr[i].period_time;
-		fprintf(logfile, "%lu;%u;%u;Initial Creation;\n", sim_time, arr[i].process_id, HIGHEST_PRIORITY-i);
+		LogEntry(sim_time, HIGHEST_PRIORITY-i, arr[i].process_id, "Initial Creation");
 	}
 
 	while(sim_time < RUN_TIME){
-		int status;
 		for(i = 0; i < arr_len; i++){
 			if(sim_time>arr[i].next_period){
+				LogEntry(sim_time, original_prio[i], arr[i].process_id, "Rescheduled");
 				pthread_setschedprio(arr[i].thread, original_prio[i]);
 				arr[i].next_period = sim_time + arr[i].period_time;
-				status = fprintf(logfile, "%lu;%u;%u;Rescheduled;\n", sim_time, arr[i].process_id, original_prio[i]);
-				printf("Status: %d\n", status);
 			}
 		}
 		nanosleep(&when, NULL);
@@ -96,6 +94,7 @@ int EarliestDeadlineScheduler(process * arr, int arr_len){
 		pthread_setschedprio(arr[i].thread, HIGHEST_PRIORITY - i);
 		arr[i].next_period = sim_time + arr[i].period_time;
 		arr[i].next_deadline = sim_time + arr[i].deadline;
+		LogEntry(sim_time, HIGHEST_PRIORITY-i, arr[i].process_id, "Initial Creation");
 	}
 
 	while(sim_time < RUN_TIME){
@@ -114,6 +113,7 @@ int EarliestDeadlineScheduler(process * arr, int arr_len){
 				}
 				for(i = 0; i < arr_len; i++){
 					pthread_setschedprio(arr[i].thread, HIGHEST_PRIORITY - 1 );
+					LogEntry(sim_time, HIGHEST_PRIORITY - 1, arr[i].process_id, "Rescheduled");
 				}
 				arr[i].next_period = sim_time + arr[i].period_time;
 			}
@@ -159,6 +159,7 @@ int ShortestCompletionScheduler(process * arr, int arr_len){
 		arr[i].thread = CreateProcess(&(arr[i]));
 		pthread_setschedprio(arr[i].thread, HIGHEST_PRIORITY - 1 );
 		arr[i].next_period = sim_time + arr[i].period_time;
+		LogEntry(sim_time, HIGHEST_PRIORITY-i, arr[i].process_id, "Initial Creation");
 	}
 
 	while(sim_time < RUN_TIME){
@@ -176,6 +177,7 @@ int ShortestCompletionScheduler(process * arr, int arr_len){
 				}
 				for(i = 0; i < arr_len; i++){
 					pthread_setschedprio(arr[i].thread, HIGHEST_PRIORITY - 1 );
+					LogEntry(sim_time, HIGHEST_PRIORITY - 1, arr[i].process_id, "Rescheduled");
 				}
 				arr[i].next_period = sim_time + arr[i].period_time;
 			}

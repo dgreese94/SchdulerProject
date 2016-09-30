@@ -10,6 +10,8 @@
 #include <sys/neutrino.h>
 #include <time.h>
 
+unsigned long sim_time;
+
 void clockTickAction(){
 	sim_time++;
 }

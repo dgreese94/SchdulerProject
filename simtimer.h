@@ -11,7 +11,7 @@
 #define TIMER_NS 1000000
 #define TIMER_SEC 0
 
-unsigned long sim_time;
+extern unsigned long sim_time;
 
 void InitSimTimer();
 
